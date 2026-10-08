@@ -27,6 +27,7 @@ from .tools_helpers.read_operations import read_error as _tools_read_error
 from .tools_helpers.read_operations import read_error_from_exception as _tools_read_error_from_exception
 from .tools_helpers.read_operations import is_db_access_error
 from .tools_helpers.errors import write_error as _tools_write_error
+from .utils.write_outcome import uncertain_write
 from .operation_queue import shutdown_operation_queue, get_operation_queue
 from .config import ThingsMCPConfig, load_config_from_env
 from .context_manager import ContextAwareResponseManager, ResponseMode
@@ -441,7 +442,10 @@ class ThingsMCPServer:
             try:
                 if self.tools.tag_validation_service:
                     result = await self.tools.tag_validation_service.create_tags([tag_name])
-                    if result['created']:
+                    uncertain = uncertain_write(result)
+                    if uncertain:
+                        return uncertain
+                    if result.get('success') is not False and result.get('created'):
                         return {
                             "success": True,
                             "message": f"Tag '{tag_name}' created successfully",

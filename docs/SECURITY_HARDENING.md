@@ -22,6 +22,9 @@ The upstream default branch matched this reviewed release when work began.
   Bulk operations preserve uncertainty at the top level. Users must inspect state
   before retrying. This prevents automatic duplicates, not exactly-once delivery.
 - Stop tag replacement if the existing-tag query fails or has no valid output.
+- At the registered `create_tag` boundary, handle uncertain results before
+  accessing success-only `created` metadata. Other metadata enhancement wrappers
+  are guarded by success checks; the registered-tool matrix covers them as well.
 
 The injection threat is a malicious argument reaching a tool's code-generation
 boundary. Merely reading a malicious task title does not execute that title.
@@ -42,14 +45,19 @@ execution and private user Library/config reads. It should be on PYTHONPATH
 before imports; it is an extra test safeguard, not a production sandbox.
 
 - Baseline unit suite: 2,222 passed, 1 packaging test skipped.
-- Final unit suite: 2,358 passed, 1 packaging test skipped.
-- Added security regressions: 136 cases, including control-character boundaries,
+- Final unit suite: 2,375 passed, 1 packaging test skipped.
+- Added security regressions: 153 cases, including control-character boundaries,
   valid source plus malicious destination, database-unavailable fallbacks,
   tag-read failure and public create-project timeout (one dispatch only).
   A 29-case public-facade suite exercises the real executor with mocked
   subprocesses across creation, updates, areas, tags, checklists, moves, bulk
   updates and scheduling. It verifies terminal uncertainty with no fallback
   dispatch, including a successful first write followed by a timed-out write.
+  An additional in-memory FastMCP client suite invokes all 16 registered
+  mutation tools through the real services and executor with mocked subprocess
+  timeout. This includes `create_tag` with test-only tag-creation permission and
+  checks that MCP structured output preserves terminal uncertainty. A coverage
+  invariant cross-checks the canonical mutation-tool set (17 tests total).
 - Packaging pytest skips because its isolated pip build cannot fetch build
   dependencies in the restricted environment. The separate wheel build with
   preinstalled, declared build dependencies succeeds.
