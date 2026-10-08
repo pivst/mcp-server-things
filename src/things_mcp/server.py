@@ -171,7 +171,7 @@ class ThingsMCPServer:
             # Must never affect server startup.
             pass
 
-        self.applescript_manager = AppleScriptManager()
+        self.applescript_manager = AppleScriptManager(config=self.config)
         boot_marker("applescript-manager-ready")
         self.tools = ThingsTools(self.applescript_manager, self.config)
         self.context_manager = ContextAwareResponseManager()

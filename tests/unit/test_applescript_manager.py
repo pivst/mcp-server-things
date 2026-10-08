@@ -402,6 +402,7 @@ class TestAuthTokenCheckedPathsTrace:
         _redirect_auth_candidates(tmp_path, monkeypatch)
 
         manager = AppleScriptManager.__new__(AppleScriptManager)
+        manager.config = ThingsMCPConfig(auth_token_auto_discovery=True)
         token, trace = manager._load_auth_token()
 
         assert token is None
@@ -415,6 +416,7 @@ class TestAuthTokenCheckedPathsTrace:
         (fake_home_dir / ".things-auth").write_text("real-token")
 
         manager = AppleScriptManager.__new__(AppleScriptManager)
+        manager.config = ThingsMCPConfig(auth_token_auto_discovery=True)
         token, trace = manager._load_auth_token()
 
         assert token == "real-token"
@@ -431,6 +433,7 @@ class TestAuthTokenCheckedPathsTrace:
         bad_file.mkdir()  # A directory, not a file - read_text() raises.
 
         manager = AppleScriptManager.__new__(AppleScriptManager)
+        manager.config = ThingsMCPConfig(auth_token_auto_discovery=True)
         token, trace = manager._load_auth_token()
 
         assert token is None

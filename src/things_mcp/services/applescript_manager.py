@@ -89,6 +89,12 @@ class AppleScriptManager:
         value itself, so it is safe to surface to callers/consumers (e.g.
         the ``checked_paths`` field on ``AUTH_TOKEN_NOT_CONFIGURED``).
         """
+        # Disabled discovery returns a status-only source trace without paths.
+        # Gate before resolving paths or accessing any credential source.
+        # Reloads use this same gate; disabling discovery is not an auth grant.
+        if not self.config.auth_token_auto_discovery:
+            return None, [{"source": "auto_discovery", "status": "disabled"}]
+
         # Path from services/applescript_manager.py -> services -> things_mcp -> src -> project root
         project_root = Path(__file__).parent.parent.parent.parent
         auth_files = [

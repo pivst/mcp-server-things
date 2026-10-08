@@ -74,7 +74,10 @@ class TestLoadAuthTokenEmptyFile:
         monkeypatch.setattr(asm_module, "__file__", str(fake_module_file))
         monkeypatch.setattr(asm_module.Path, "home", staticmethod(lambda: fake_home_dir))
 
+        from things_mcp.config import ThingsMCPConfig
+
         manager = AppleScriptManager.__new__(AppleScriptManager)
+        manager.config = ThingsMCPConfig(auth_token_auto_discovery=True)
         token, trace = manager._load_auth_token()
 
         assert token == "real-token-456"

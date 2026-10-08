@@ -85,6 +85,11 @@ class ThingsMCPConfig(BaseSettings):
         description="Number of retries for failed AppleScript operations"
     )
     
+    auth_token_auto_discovery: bool = Field(
+        default=True,
+        description="Automatically discover Things auth tokens from local sources"
+    )
+
     preferred_execution_method: ExecutionMethod = Field(
         default=ExecutionMethod.HYBRID,
         description="Preferred method for executing Things 3 operations"

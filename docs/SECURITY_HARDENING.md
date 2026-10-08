@@ -45,8 +45,8 @@ execution and private user Library/config reads. It should be on PYTHONPATH
 before imports; it is an extra test safeguard, not a production sandbox.
 
 - Baseline unit suite: 2,222 passed, 1 packaging test skipped.
-- Final unit suite: 2,375 passed, 1 packaging test skipped.
-- Added security regressions: 153 cases, including control-character boundaries,
+- Final unit suite: 2,383 passed, 1 packaging test skipped.
+- Added security regressions: 161 cases, including control-character boundaries,
   valid source plus malicious destination, database-unavailable fallbacks,
   tag-read failure and public create-project timeout (one dispatch only).
   A 29-case public-facade suite exercises the real executor with mocked
@@ -80,8 +80,8 @@ before imports; it is an extra test safeguard, not a production sandbox.
 ## Remaining limits and connection prerequisites
 
 This is a focused repair, not a complete dependency/security audit. Existing
-HTTP authentication exposure, default note inclusion, token auto-discovery and
-sensitive debug logging behavior remain outside this patch. Keep any later
+HTTP authentication exposure, default note inclusion, sensitive debug logging behavior remain outside this patch. Token auto-discovery
+can now be explicitly disabled; its default remains compatible (enabled). Keep any later
 connection on local stdio, disable debug logging, and review data/tool exposure.
 Do not grant broad system permissions as a substitute for verification.
 
@@ -95,3 +95,49 @@ this commit.
 The initial pushed commit `01b0b0d` had zero Actions runs, zero check runs and
 zero commit statuses when queried. No hosted CI was enabled or requested.
 Local validation above is the evidence; hosted CI success is not claimed.
+
+## Capability-only connection configuration (not installed)
+
+`auth_token_auto_discovery` defaults to `true`. Set
+`THINGS_MCP_AUTH_TOKEN_AUTO_DISCOVERY=false` before startup to return a disabled
+trace before resolving any credential path or reading credential sources.
+Reload-on-miss uses the same gate. Auth-required URL writes still fail closed.
+Eight additional tests cover the default, environment parsing, no source access,
+reload, auth gating and propagation of resolved server configuration.
+
+After separately approving installation of this pinned fork wheel into a dedicated
+runtime, the normal module entrypoint needs no custom launcher or monkey-patching.
+Replace the two absolute paths below with the installed runtime and clean working
+directory. This is a proposed client configuration, not a registration performed
+by this patch:
+
+```toml
+[mcp_servers.things_probe]
+command = "/absolute/path/to/runtime/bin/python"
+args = ["-I", "-m", "things_mcp", "--transport", "stdio"]
+cwd = "/absolute/path/to/clean-working-directory"
+enabled_tools = ["get_server_capabilities"]
+default_tools_approval_mode = "prompt"
+startup_timeout_sec = 30
+tool_timeout_sec = 60
+
+[mcp_servers.things_probe.env]
+PYTHON_DOTENV_DISABLED = "1"
+THINGS_MCP_AUTH_TOKEN_AUTO_DISCOVERY = "false"
+THINGS_MCP_LOG_LEVEL = "WARNING"
+THINGS_MCP_TRANSPORT = "stdio"
+```
+
+Use a python-dotenv version supporting `PYTHON_DOTENV_DISABLED` (validated with
+1.2.4). The environment switch prevents both module-level and configuration-level
+`.env` loading; no custom loader is needed. Do not pass `--debug`. Install the wheel
+rather than using the development editable environment. No token, HTTP endpoint,
+Full Disk Access or changes to other MCP servers are needed for this probe.
+
+Capabilities currently starts the empty operation queue to report queue status
+and calls `is_things_running` via an AppleEvent to report live availability.
+This may launch Things or prompt for macOS Automation permission, but does not
+read tasks, notes or the database. An unavailable Things status is not proof of
+connectivity. Native discovery and a permitted call from a fresh delegated task
+remain the acceptance test, after installation and persistent configuration are
+approved. No real MCP server or Things probe was run during these repairs.
