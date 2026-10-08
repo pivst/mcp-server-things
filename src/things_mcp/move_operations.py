@@ -9,9 +9,11 @@ with comprehensive error handling and validation.
 from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
 import asyncio
+
 import logging
 import time
 
+from .utils.applescript_utils import AppleScriptTemplates
 from .services.applescript_manager import AppleScriptManager
 from .services.validation_service import ValidationService
 from .things_import import LazyThingsProxy
@@ -635,9 +637,9 @@ class MoveOperationsTools:
         lines = [
             "tell application \"Things3\"",
             "    try",
-            f"        set theTodo to to do id \"{todo_id}\"",
-            f"        move theTodo to list \"{list_name}\"",
-            f"        return \"MOVED to {list_name}\"",
+            f"        set theTodo to to do id \"{AppleScriptTemplates.escape_string_inner(todo_id)}\"",
+            f"        move theTodo to list \"{AppleScriptTemplates.escape_string_inner(list_name)}\"",
+            f"        return \"MOVED to {AppleScriptTemplates.escape_string_inner(list_name)}\"",
             "    on error errMsg",
             "        return \"ERROR: \" & errMsg",
             "    end try",
@@ -663,7 +665,7 @@ class MoveOperationsTools:
         lines = [
             "tell application \"Things3\"",
             "    try",
-            f"        set theTodo to to do id \"{todo_id}\"",
+            f"        set theTodo to to do id \"{AppleScriptTemplates.escape_string_inner(todo_id)}\"",
             "        set status of theTodo to completed",
             "        return \"MOVED to logbook\"",
             "    on error errMsg",
@@ -683,14 +685,14 @@ class MoveOperationsTools:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
-                set targetProject to project id "{project_id}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
+                set targetProject to project id "{AppleScriptTemplates.escape_string_inner(project_id)}"
                 
                 -- Set the project property instead of using move command
                 -- The move command doesn't work for projects in Things 3
                 set project of theTodo to targetProject
                 
-                return "MOVED to project {project_id}"
+                return "MOVED to project {AppleScriptTemplates.escape_string_inner(project_id)}"
             on error errMsg
                 return "ERROR: " & errMsg
             end try
@@ -708,14 +710,14 @@ class MoveOperationsTools:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
-                set targetArea to area id "{area_id}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
+                set targetArea to area id "{AppleScriptTemplates.escape_string_inner(area_id)}"
                 
                 -- Set the area property instead of using move command
                 -- The move command doesn't work for areas in Things 3
                 set area of theTodo to targetArea
                 
-                return "MOVED to area {area_id}"
+                return "MOVED to area {AppleScriptTemplates.escape_string_inner(area_id)}"
             on error errMsg
                 return "ERROR: " & errMsg
             end try

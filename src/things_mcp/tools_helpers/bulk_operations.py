@@ -1,5 +1,7 @@
 """Bulk operations for Things 3 - efficient batch updates via AppleScript."""
 
+from ..utils.applescript_utils import AppleScriptTemplates
+
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -163,7 +165,7 @@ class BulkOperations:
 
         for todo_id in todo_ids:
             script += f'    try\n'
-            script += f'        set targetTodo to to do id "{todo_id}"\n'
+            script += f'        set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"\n'
 
             # Handle status updates with proper precedence (mirrors
             # TodoOperations._build_update_script / update_project):
@@ -227,7 +229,7 @@ class BulkOperations:
 
             script += '        set successCount to successCount + 1\n'
             script += '    on error errMsg\n'
-            script += f'        set end of errorMessages to "ID {todo_id}: " & errMsg\n'
+            script += f'        set end of errorMessages to "ID {AppleScriptTemplates.escape_string_inner(todo_id)}: " & errMsg\n'
             script += '    end try\n'
 
         script += '    return {successCount:successCount, errors:errorMessages}\n'

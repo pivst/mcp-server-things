@@ -6,6 +6,8 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
+from ...utils.applescript_utils import AppleScriptTemplates
+
 logger = logging.getLogger(__name__)
 
 
@@ -306,7 +308,7 @@ class AppleScriptFormatters:
         try
             set dateValue to {date_property}
             if dateValue is missing value then
-                "{fallback_value}"
+                "{AppleScriptTemplates.escape_string_inner(fallback_value)}"
             else
                 set yyyy to (year of dateValue) as string
                 set mm to (month of dateValue as integer) as string
@@ -317,6 +319,6 @@ class AppleScriptFormatters:
                 yyyy & "-" & mm & "-" & dd & " " & timeStr
             end if
         on error
-            "{fallback_value}"
+            "{AppleScriptTemplates.escape_string_inner(fallback_value)}"
         end try
         '''

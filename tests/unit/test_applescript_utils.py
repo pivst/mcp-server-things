@@ -92,9 +92,9 @@ class TestEscapeStringInner:
         inner = literal[1:-1]
         assert count_unescaped_quotes(inner) == 0
 
-    def test_other_control_chars_stripped(self):
-        result = AppleScriptTemplates.escape_string_inner('a\x01\x02b')
-        assert result == 'ab'
+    def test_other_control_chars_rejected(self):
+        with pytest.raises(ValueError):
+            AppleScriptTemplates.escape_string_inner('a\x01\x02b')
 
 
 class TestEscapeString:

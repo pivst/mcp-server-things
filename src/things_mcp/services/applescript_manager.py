@@ -6,10 +6,12 @@ This module serves as a facade that delegates to specialized modules:
 """
 
 import logging
+import shlex
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from ..utils.applescript_utils import AppleScriptTemplates
 from ..locale_aware_dates import locale_handler
 from ..config import ThingsMCPConfig
 from .applescript import (
@@ -163,17 +165,18 @@ class AppleScriptManager:
         """Check if Things 3 is currently running."""
         return await self.executor.is_things_running()
 
-    async def execute_applescript(self, script: str, cache_key: Optional[str] = None) -> Dict[str, Any]:
+    async def execute_applescript(self, script: str, cache_key: Optional[str] = None, *, retry_safe: bool = False) -> Dict[str, Any]:
         """Execute an AppleScript command.
 
         Args:
             script: AppleScript code to execute
             cache_key: Ignored - caching removed for hybrid implementation
+            retry_safe: Explicit opt-in for proven read-only/idempotent scripts
 
         Returns:
             Dict with success status, output, and error information
         """
-        return await self.executor.execute_script(script)
+        return await self.executor.execute_script(script, retry_safe=retry_safe)
 
     async def execute_url_scheme(self, action: str, parameters: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Execute a Things URL scheme command.
@@ -217,7 +220,10 @@ class AppleScriptManager:
                 url = self.formatters.build_things_url(action, parameters or {}, self.auth_token)
 
             # Use do shell script with open -g to avoid bringing Things to foreground
-            script = f'''do shell script "open -g '{url}'"'''
+            if not isinstance(url, str) or not url.startswith("things:///"):
+                raise ValueError("Expected a Things URL")
+            command = "open -g -- " + shlex.quote(url)
+            script = "do shell script " + AppleScriptTemplates.escape_string(command)
 
             result = await self.executor.execute_script(script)
 
@@ -232,6 +238,7 @@ class AppleScriptManager:
                 return {
                     "success": False,
                     "error": result.get("error", "Unknown error"),
+                    "outcome_uncertain": result.get("outcome_uncertain", False),
                     "url": url
                 }
 

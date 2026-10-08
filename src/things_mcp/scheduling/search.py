@@ -32,7 +32,7 @@ class SearchOperations:
             AppleScript code for list selection
         """
         if list_name:
-            return f'set allTodos to to dos of list "{list_name}"\n'
+            return f'set allTodos to to dos of list "{AppleScriptTemplates.escape_string_inner(list_name)}"\n'
 
         # Include active lists
         script = '''

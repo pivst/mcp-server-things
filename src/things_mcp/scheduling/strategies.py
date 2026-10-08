@@ -1,9 +1,11 @@
 """Scheduling strategies for reliable date scheduling in Things 3."""
 
+
 import logging
 from datetime import datetime, timedelta, date
 from typing import Dict, Any
 
+from ..utils.applescript_utils import AppleScriptTemplates
 from ..locale_aware_dates import locale_handler
 from .helpers import SchedulingHelpers
 
@@ -111,7 +113,7 @@ class SchedulingStrategies:
             script = f'''
             tell application "Things3"
                 try
-                    set theTodo to to do id "{todo_id}"
+                    set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                     move theTodo to list "Today"
                     return "scheduled_relative"
                 on error errMsg
@@ -140,7 +142,7 @@ class SchedulingStrategies:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
 
                 -- Create proper date object
                 {date_setup}
@@ -181,7 +183,7 @@ class SchedulingStrategies:
             script = f'''
             tell application "Things3"
                 try
-                    set theTodo to to do id "{todo_id}"
+                    set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                     move theTodo to list "Today"
                     return "scheduled_objects"
                 on error errMsg
@@ -201,7 +203,7 @@ class SchedulingStrategies:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
 
                 -- Construct date object safely to avoid month overflow bug
                 set targetDate to (current date)
@@ -241,8 +243,8 @@ class SchedulingStrategies:
             script = f'''
             tell application "Things3"
                 try
-                    set theTodo to to do id "{todo_id}"
-                    schedule theTodo for date "{date_format}"
+                    set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
+                    schedule theTodo for date "{AppleScriptTemplates.escape_string_inner(date_format)}"
                     return "scheduled_direct"
                 on error errMsg
                     return "error: " & errMsg
@@ -286,8 +288,8 @@ class SchedulingStrategies:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
-                move theTodo to list "{target_list}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
+                move theTodo to list "{AppleScriptTemplates.escape_string_inner(target_list)}"
                 return "moved_to_list"
             on error errMsg
                 return "error: " & errMsg

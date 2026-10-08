@@ -24,7 +24,7 @@ class AppleScriptTemplates:
         - Escaping newlines/carriage returns/tabs to their AppleScript
           literal escape sequences (\\n, \\r, \\t) so they survive inside a
           double-quoted literal instead of being collapsed to spaces
-        - Removing other control characters
+        - Rejecting other control characters
 
         Args:
             text: Text to escape
@@ -34,6 +34,11 @@ class AppleScriptTemplates:
         """
         if not text:
             return ''
+
+        # Reject unsupported controls rather than silently changing an ID/name.
+        if any((ord(c) < 32 and c not in "\n\r\t")
+               or 127 <= ord(c) <= 159 or c in "\u2028\u2029" for c in text):
+            raise ValueError("Unsupported control character in AppleScript string")
 
         # CRITICAL: Escape backslashes FIRST, then quotes
         escaped = text.replace('\\', '\\\\').replace('"', '\\"')
@@ -45,9 +50,6 @@ class AppleScriptTemplates:
                    .replace('\n', '\\n')
                    .replace('\r', '\\r')
                    .replace('\t', '\\t'))
-
-        # Remove any remaining control characters (ASCII 0-31)
-        escaped = ''.join(c for c in escaped if ord(c) >= 32)
 
         return escaped
 

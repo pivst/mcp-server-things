@@ -682,12 +682,16 @@ class WriteOperations:
 
             get_tags_script = f'''
             tell application "Things3"
-                set targetTodo to to do id "{todo_id}"
+                set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                 return tag names of targetTodo
             end tell
             '''
 
             current_tags_result = await self.applescript.execute_applescript(get_tags_script)
+            if (not current_tags_result.get("success")
+                    or not isinstance(current_tags_result.get("output"), str)
+                    or current_tags_result["output"].strip().lower().startswith("error:")):
+                return write_error("TAG_READ_FAILED", "Cannot read existing tags; no tag replacement dispatched")
             current_tags_str = current_tags_result.get('output', '').strip()
 
             current_tags = [t.strip() for t in current_tags_str.split(',') if t.strip()] if current_tags_str else []
@@ -701,7 +705,7 @@ class WriteOperations:
 
             script = f'''
             tell application "Things3"
-                set targetTodo to to do id "{todo_id}"
+                set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                 set tag names of targetTodo to {escaped_tags_string}
                 return "tags_added"
             end tell
@@ -770,12 +774,16 @@ class WriteOperations:
 
             get_tags_script = f'''
             tell application "Things3"
-                set targetTodo to to do id "{todo_id}"
+                set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                 return tag names of targetTodo
             end tell
             '''
 
             current_tags_result = await self.applescript.execute_applescript(get_tags_script)
+            if (not current_tags_result.get("success")
+                    or not isinstance(current_tags_result.get("output"), str)
+                    or current_tags_result["output"].strip().lower().startswith("error:")):
+                return write_error("TAG_READ_FAILED", "Cannot read existing tags; no tag replacement dispatched")
             current_tags_str = current_tags_result.get('output', '').strip()
 
             current_tags = [t.strip() for t in current_tags_str.split(',') if t.strip()] if current_tags_str else []
@@ -795,7 +803,7 @@ class WriteOperations:
                 escaped_tags_string = ToolsHelpers.escape_applescript_string(', '.join(remaining_tags))
                 script = f'''
                 tell application "Things3"
-                    set targetTodo to to do id "{todo_id}"
+                    set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                     set tag names of targetTodo to {escaped_tags_string}
                     return "tags_removed"
                 end tell
@@ -803,7 +811,7 @@ class WriteOperations:
             else:
                 script = f'''
                 tell application "Things3"
-                    set targetTodo to to do id "{todo_id}"
+                    set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                     set tag names of targetTodo to ""
                     return "tags_removed"
                 end tell

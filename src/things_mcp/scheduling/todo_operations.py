@@ -523,6 +523,8 @@ class TodoOperations:
                 project_id=project_id, area_id=area_id
             )
             result = await self.applescript.execute_applescript(script)
+            if result.get("outcome_uncertain"):
+                return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
 
             if result.get("success"):
                 todo_id = result.get("output", "").strip()
@@ -1182,7 +1184,7 @@ class TodoOperations:
         script = f'''
             tell application "Things3"
                 try
-                    set targetTodo to to do id "{todo_id}"
+                    set targetTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
             '''
 
         # Update title if provided (titles cannot be cleared - callers reject
@@ -1641,6 +1643,8 @@ class TodoOperations:
                                                   area, project, completed, canceled,
                                                   project_id=project_id, area_id=area_id)
                 result = await self.applescript.execute_applescript(script)
+                if result.get("outcome_uncertain"):
+                    return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
 
                 if result.get("success"):
                     output = result.get("output", "").strip()
@@ -2211,6 +2215,8 @@ class TodoOperations:
             # Build and execute script
             script = self._build_create_project_script(title, notes, tags, deadline, area_id, area_title, todos)
             result = await self.applescript.execute_applescript(script)
+            if result.get("outcome_uncertain"):
+                return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
 
             if result.get("success"):
                 output_lines = (result.get("output", "") or "").strip().split("\n")
@@ -2379,7 +2385,7 @@ class TodoOperations:
             script = f'''
             tell application "Things3"
                 try
-                    set targetProject to project id "{project_id}"
+                    set targetProject to project id "{AppleScriptTemplates.escape_string_inner(project_id)}"
             '''
 
             # Update title if provided (titles cannot be cleared - callers
@@ -2461,6 +2467,8 @@ class TodoOperations:
             '''
 
             result = await self.applescript.execute_applescript(script)
+            if result.get("outcome_uncertain"):
+                return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
 
             if result.get("success"):
                 output = result.get("output", "").strip()

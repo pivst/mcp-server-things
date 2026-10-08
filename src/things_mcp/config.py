@@ -17,6 +17,8 @@ except ImportError:
     from pydantic import BaseSettings
 from pydantic import Field, field_validator, model_validator, ConfigDict
 
+from .utils.applescript_utils import AppleScriptTemplates
+
 
 class ExecutionMethod(str, Enum):
     """Preferred execution method for AppleScript operations"""
@@ -535,7 +537,7 @@ class ThingsMCPConfig(BaseSettings):
             try:
                 import subprocess
                 result = subprocess.run(
-                    ['osascript', '-e', f'tell application "{self.things_app_name}" to return version'],
+                    ['osascript', '-e', f'tell application "{AppleScriptTemplates.escape_string_inner(self.things_app_name)}" to return version'],
                     capture_output=True,
                     text=True,
                     timeout=5

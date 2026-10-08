@@ -530,7 +530,7 @@ class TestRetryLogic:
             
             mock_create.side_effect = [process1, process2]
             
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
             
             assert result["success"] is True
             assert result["output"] == "3.21.15"
@@ -551,7 +551,7 @@ class TestRetryLogic:
             mock_process.returncode = 1
             mock_create.return_value = mock_process
             
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
             
             assert result["success"] is False
             assert "Persistent error" in result["error"]
@@ -574,7 +574,7 @@ class TestRetryLogic:
             mock_process.returncode = 1
             mock_create.return_value = mock_process
             
-            await manager_with_retries.execute_applescript(script)
+            await manager_with_retries.execute_applescript(script, retry_safe=True)
             
             # Check that sleep was called with exponential backoff
             sleep_calls = [call.args[0] for call in mock_sleep.call_args_list]
@@ -583,14 +583,7 @@ class TestRetryLogic:
 
 
 class TestRetryOnErrorStdout:
-    """hq-c7a: rc=0 osascript results whose stdout is the in-script
-    "ERROR:"-prefixed convention (move_operations.py's
-    _build_project_move_script/_build_area_move_script/_get_todo_info,
-    tag_service.py's tag-creation script - `on error errMsg / return
-    "ERROR: " & errMsg`) must be retried the same as a nonzero returncode,
-    since Things 3 intermittently errors under rapid back-to-back
-    AppleEvents even though the osascript process itself still exits 0.
-    """
+    """Explicitly read-only scripts can retry in-script errors."""
 
     @pytest.fixture
     def manager_with_retries(self):
@@ -598,13 +591,8 @@ class TestRetryOnErrorStdout:
         return AppleScriptManager(timeout=5, retry_count=3)
 
     @pytest.mark.asyncio
-    async def test_error_stdout_retried_then_exhausted_returns_as_is(self, manager_with_retries):
-        """rc=0 + 'ERROR: ...' stdout on every attempt -> retried up to the
-        bound (attempt count == retry_count), then returned exactly as
-        produced (success=True, output starts with 'ERROR:') rather than
-        being wrapped in a different failure envelope - callers such as
-        move_operations.py parse `output.startswith("ERROR:")` on the
-        raw result and must keep working unchanged on final exhaustion."""
+    async def test_readonly_error_stdout_exhausted_reports_failure(self, manager_with_retries):
+        """Read-only errors exhaust retries and report failure with original output."""
         script = 'tell application "Things3" to return "ERROR: " & "boom"'
 
         with patch('asyncio.create_subprocess_exec') as mock_create, \
@@ -615,12 +603,12 @@ class TestRetryOnErrorStdout:
             mock_process.returncode = 0
             mock_create.return_value = mock_process
 
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
 
             assert mock_create.call_count == 3  # retried up to retry_count
             assert mock_sleep.call_count == 2  # backoff before each retry
-            # Returned exactly as produced - same shape callers already parse.
-            assert result["success"] is True
+            # Exhausted read-only retries retain output but report failure.
+            assert result["success"] is False
             assert result["output"] == "ERROR: boom"
 
     @pytest.mark.asyncio
@@ -636,7 +624,7 @@ class TestRetryOnErrorStdout:
             mock_process.returncode = 0
             mock_create.return_value = mock_process
 
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
 
             assert mock_create.call_count == 1
             assert mock_sleep.call_count == 0
@@ -658,13 +646,13 @@ class TestRetryOnErrorStdout:
             mock_process.returncode = 1
             mock_create.return_value = mock_process
 
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
 
             assert mock_create.call_count == 3
             assert mock_sleep.call_count == 2
             assert result["success"] is False
             assert "Persistent error" in result["error"]
-            assert "Failed after 3 attempts" in result["error"]
+            assert result["attempts"] == 3
 
     @pytest.mark.asyncio
     async def test_success_on_second_attempt_after_error_stdout(self, manager_with_retries):
@@ -685,7 +673,7 @@ class TestRetryOnErrorStdout:
 
             mock_create.side_effect = [process1, process2]
 
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
 
             assert mock_create.call_count == 2
             assert mock_sleep.call_count == 1
@@ -706,10 +694,10 @@ class TestRetryOnErrorStdout:
             mock_process.returncode = 0
             mock_create.return_value = mock_process
 
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
 
             assert mock_create.call_count == 3
-            assert result["success"] is True
+            assert result["success"] is False
             # Executor strips stdout into `output` regardless of retry path.
             assert result["output"] == "ERROR: boom"
 
@@ -730,7 +718,7 @@ class TestRetryOnErrorStdout:
             mock_process.returncode = 0
             mock_create.return_value = mock_process
 
-            result = await manager_with_retries.execute_applescript(script)
+            result = await manager_with_retries.execute_applescript(script, retry_safe=True)
 
             assert mock_create.call_count == 1
             assert mock_sleep.call_count == 0

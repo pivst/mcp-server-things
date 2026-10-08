@@ -21,6 +21,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 
+from .utils.applescript_utils import AppleScriptTemplates
 logger = logging.getLogger(__name__)
 
 class ReliableThingsScheduler:
@@ -156,7 +157,7 @@ class ReliableThingsScheduler:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                 {command}
                 return "scheduled"
             on error errMsg
@@ -186,7 +187,7 @@ class ReliableThingsScheduler:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
                 
                 -- Construct date object safely to avoid month overflow bug
                 set targetDate to current date
@@ -217,8 +218,8 @@ class ReliableThingsScheduler:
         script = f'''
         tell application "Things3"
             try
-                set theTodo to to do id "{todo_id}"
-                schedule theTodo for date "{date_string}"
+                set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
+                schedule theTodo for date "{AppleScriptTemplates.escape_string_inner(date_string)}"
                 return "scheduled"
             on error errMsg
                 return "error: " & errMsg
@@ -242,8 +243,8 @@ class ReliableThingsScheduler:
             script = f'''
             tell application "Things3"
                 try
-                    set theTodo to to do id "{todo_id}"
-                    move theTodo to list "{target_list}"
+                    set theTodo to to do id "{AppleScriptTemplates.escape_string_inner(todo_id)}"
+                    move theTodo to list "{AppleScriptTemplates.escape_string_inner(target_list)}"
                     return "moved"
                 on error errMsg
                     return "error: " & errMsg
