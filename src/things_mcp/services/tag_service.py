@@ -5,6 +5,8 @@ Provides advanced tag validation and policy enforcement capabilities,
 including filtering, creation policies, and tag management operations.
 """
 
+from ..utils.write_outcome import uncertain_write
+
 import logging
 from typing import Dict, Any, List, Optional, Set
 from dataclasses import dataclass
@@ -265,6 +267,9 @@ class TagValidationService:
                     '''
                     
                     result = await self.applescript.execute_applescript(script, cache_key=None)
+                    uncertain = uncertain_write(result)
+                    if uncertain:
+                        return uncertain
                     
                     if result.get("success") and result.get("output") == "CREATED":
                         created_tags.append(tag_name)

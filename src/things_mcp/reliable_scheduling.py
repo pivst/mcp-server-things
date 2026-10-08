@@ -17,12 +17,19 @@ Architecture: Multi-layered approach with graceful fallback:
 3. List Assignment (85% reliability) - Final fallback
 """
 
+from .utils.write_outcome import uncertain_write
+
 import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
 
 from .utils.applescript_utils import AppleScriptTemplates
 logger = logging.getLogger(__name__)
+
+class _UncertainScheduling(Exception):
+    def __init__(self, result: Dict[str, Any]):
+        self.result: Dict[str, Any] = result
+
 
 class ReliableThingsScheduler:
     """Ultra-reliable scheduler for Things 3 date scheduling."""
@@ -70,7 +77,11 @@ class ReliableThingsScheduler:
         """
 
         # Layer 1: AppleScript Date Objects (High Reliability - Primary)
-        if await self._try_applescript_date_objects(todo_id, when_date):
+        try:
+            scheduled = await self._try_applescript_date_objects(todo_id, when_date)
+        except _UncertainScheduling as exc:
+            return exc.result
+        if scheduled:
             return {
                 "success": True,
                 "method": "applescript_objects",
@@ -80,6 +91,9 @@ class ReliableThingsScheduler:
 
         # Layer 2: List Assignment (Moderate Reliability - Final Fallback)
         list_result = await self._try_list_assignment_fallback(todo_id, when_date)
+        uncertain = uncertain_write(list_result)
+        if uncertain:
+            return uncertain
         if list_result["success"]:
             return {
                 "success": True,
@@ -138,6 +152,8 @@ class ReliableThingsScheduler:
                 # If not parseable as ISO date, fall back to string approach
                 return await self._schedule_string_date_applescript(todo_id, when_date)
                 
+        except _UncertainScheduling:
+            raise
         except Exception as e:
             logger.debug(f"AppleScript date object scheduling failed: {e}")
             return False
@@ -167,6 +183,9 @@ class ReliableThingsScheduler:
         '''
         
         result = await self.applescript.execute_applescript(script)
+        uncertain = uncertain_write(result)
+        if uncertain:
+            raise _UncertainScheduling(uncertain)
         if result.get("success") and "scheduled" in result.get("output", ""):
             logger.info(f"Successfully scheduled todo {todo_id} for {relative_date} via AppleScript")
             return True
@@ -207,6 +226,9 @@ class ReliableThingsScheduler:
         '''
         
         result = await self.applescript.execute_applescript(script)
+        uncertain = uncertain_write(result)
+        if uncertain:
+            raise _UncertainScheduling(uncertain)
         if result.get("success") and "scheduled" in result.get("output", ""):
             logger.info(f"Successfully scheduled todo {todo_id} for {target_date} via AppleScript date objects")
             return True
@@ -228,6 +250,9 @@ class ReliableThingsScheduler:
         '''
         
         result = await self.applescript.execute_applescript(script)
+        uncertain = uncertain_write(result)
+        if uncertain:
+            raise _UncertainScheduling(uncertain)
         if result.get("success") and "scheduled" in result.get("output", ""):
             logger.info(f"Successfully scheduled todo {todo_id} for {date_string} via AppleScript string")
             return True
@@ -253,6 +278,9 @@ class ReliableThingsScheduler:
             '''
             
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
             if result.get("success") and "moved" in result.get("output", ""):
                 logger.info(f"Successfully moved todo {todo_id} to {target_list} list as scheduling fallback")
                 return {"success": True, "assigned_list": target_list}

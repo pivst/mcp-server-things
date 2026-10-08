@@ -16,7 +16,10 @@ The upstream default branch matched this reviewed release when work began.
   follow a partial write; return `OUTCOME_UNCERTAIN`, not automatic replay.
   `retry_safe=True` is an internal, explicit opt-in for callers that establish
   read-only/idempotent behavior. Only the availability probe opts in currently.
-  Creation responses preserve the uncertainty marker; users must inspect state
+  All public mutation responses preserve a structured uncertainty marker and
+  `retry_safe=False`; scheduling/deletion fallback chains stop immediately,
+  including per-format date retries and follow-up writes after creation.
+  Bulk operations preserve uncertainty at the top level. Users must inspect state
   before retrying. This prevents automatic duplicates, not exactly-once delivery.
 - Stop tag replacement if the existing-tag query fails or has no valid output.
 
@@ -39,17 +42,21 @@ execution and private user Library/config reads. It should be on PYTHONPATH
 before imports; it is an extra test safeguard, not a production sandbox.
 
 - Baseline unit suite: 2,222 passed, 1 packaging test skipped.
-- Final unit suite: 2,329 passed, 1 packaging test skipped.
-- Added security regressions: 107 cases, including control-character boundaries,
+- Final unit suite: 2,358 passed, 1 packaging test skipped.
+- Added security regressions: 136 cases, including control-character boundaries,
   valid source plus malicious destination, database-unavailable fallbacks,
   tag-read failure and public create-project timeout (one dispatch only).
+  A 29-case public-facade suite exercises the real executor with mocked
+  subprocesses across creation, updates, areas, tags, checklists, moves, bulk
+  updates and scheduling. It verifies terminal uncertainty with no fallback
+  dispatch, including a successful first write followed by a timed-out write.
 - Packaging pytest skips because its isolated pip build cannot fetch build
   dependencies in the restricted environment. The separate wheel build with
   preinstalled, declared build dependencies succeeds.
 - Integration suite: all 122 cases skipped in both baseline and fixed checkout
   because live testing is opt-in. No live test result is claimed.
 - `git diff --check` passes. Focused flake8/Black/isort checks on the executor,
-  new security tests and test guard pass, using the project's intended E501/W503
+  new security tests, uncertainty helper and test guard pass, using the project's intended E501/W503
   exclusions for flake8.
 - Repository-wide flake8 and isort are already failing upstream. With E501
   excluded as intended by pyproject.toml, flake8 has the same 1,321 diagnostics
@@ -76,3 +83,7 @@ Configuration presence alone is not proof of connectivity. Start with capability
 and read-only probes; separately validate write behavior and preserve the
 existing notification deduplication protocol. No MCP integration is enabled by
 this commit.
+
+The initial pushed commit `01b0b0d` had zero Actions runs, zero check runs and
+zero commit statuses when queried. No hosted CI was enabled or requested.
+Local validation above is the evidence; hosted CI success is not claimed.

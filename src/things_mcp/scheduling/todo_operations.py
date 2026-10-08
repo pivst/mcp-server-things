@@ -2,6 +2,8 @@
 
 import asyncio
 import json
+from ..utils.write_outcome import uncertain_write
+
 import logging
 import time
 from typing import Dict, Any, List, Optional, Tuple
@@ -523,8 +525,9 @@ class TodoOperations:
                 project_id=project_id, area_id=area_id
             )
             result = await self.applescript.execute_applescript(script)
-            if result.get("outcome_uncertain"):
-                return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get("success"):
                 todo_id = result.get("output", "").strip()
@@ -538,6 +541,9 @@ class TodoOperations:
                     # Schedule if when date provided
                     if when:
                         schedule_result = await self.scheduler.schedule_todo_reliable(todo_id, when)
+                        uncertain = uncertain_write(schedule_result)
+                        if uncertain:
+                            return uncertain
                         response["message"] = "Todo created and scheduled successfully"
                         response["scheduling"] = schedule_result
                     else:
@@ -898,6 +904,9 @@ class TodoOperations:
 
             logger.debug(f"Creating todo via URL scheme: {params}")
             result = await self.applescript.execute_url_scheme('add', params)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if not result.get('success'):
                 return _write_error(
@@ -994,6 +1003,9 @@ class TodoOperations:
         (present on the auth-gate error) are forwarded through either path
         when present.
         """
+        uncertain = uncertain_write(result)
+        if uncertain:
+            return uncertain
         code = result.get('error', 'Unknown error')
         if isinstance(code, str) and code.isupper() and code.replace('_', '').isalpha():
             response = _write_error(
@@ -1037,6 +1049,9 @@ class TodoOperations:
 
             logger.debug(f"Adding {len(items)} checklist items to todo {todo_id}")
             result = await self.applescript.execute_url_scheme('update', params)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get('success'):
                 return {
@@ -1079,6 +1094,9 @@ class TodoOperations:
 
             logger.debug(f"Prepending {len(items)} checklist items to todo {todo_id}")
             result = await self.applescript.execute_url_scheme('update', params)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get('success'):
                 return {
@@ -1116,6 +1134,9 @@ class TodoOperations:
 
             logger.debug(f"Replacing checklist items in todo {todo_id} with {len(items)} new items")
             result = await self.applescript.execute_url_scheme('update', params)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get('success'):
                 return {
@@ -1643,8 +1664,9 @@ class TodoOperations:
                                                   area, project, completed, canceled,
                                                   project_id=project_id, area_id=area_id)
                 result = await self.applescript.execute_applescript(script)
-                if result.get("outcome_uncertain"):
-                    return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
+                uncertain = uncertain_write(result)
+                if uncertain:
+                    return uncertain
 
                 if result.get("success"):
                     output = result.get("output", "").strip()
@@ -1713,6 +1735,9 @@ class TodoOperations:
                         )
 
                 url_result = await self.applescript.execute_url_scheme('update', url_params)
+                uncertain = uncertain_write(url_result)
+                if uncertain:
+                    return uncertain
 
                 if not url_result.get('success'):
                     if heading:
@@ -1729,6 +1754,9 @@ class TodoOperations:
             # either).
             if when and not when_is_evening and not when_has_time:
                 schedule_result = await self.scheduler.schedule_todo_reliable(todo_id, when)
+                uncertain = uncertain_write(schedule_result)
+                if uncertain:
+                    return uncertain
                 response = {
                     "success": True,
                     "message": "Todo updated and scheduled successfully",
@@ -1986,6 +2014,9 @@ class TodoOperations:
             before_ids = await self._find_project_ids_by_title(title)
 
             result = await self.applescript.execute_url_scheme('json', {'data': json.dumps(payload)})
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
             if not result.get('success'):
                 return _write_error(
                     "APPLESCRIPT_ERROR", "Failed to create project via URL scheme",
@@ -2082,6 +2113,9 @@ class TodoOperations:
                 }
             elif when_kwarg:
                 schedule_result = await self.scheduler.schedule_todo_reliable(project_id, when_kwarg)
+                uncertain = uncertain_write(schedule_result)
+                if uncertain:
+                    return uncertain
                 response["message"] = "Project created and scheduled successfully"
                 response["scheduling"] = schedule_result
 
@@ -2215,8 +2249,9 @@ class TodoOperations:
             # Build and execute script
             script = self._build_create_project_script(title, notes, tags, deadline, area_id, area_title, todos)
             result = await self.applescript.execute_applescript(script)
-            if result.get("outcome_uncertain"):
-                return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get("success"):
                 output_lines = (result.get("output", "") or "").strip().split("\n")
@@ -2274,6 +2309,9 @@ class TodoOperations:
                         }
                     elif when:
                         schedule_result = await self.scheduler.schedule_todo_reliable(project_id, when)
+                        uncertain = uncertain_write(schedule_result)
+                        if uncertain:
+                            return uncertain
                         response["message"] = "Project created and scheduled successfully"
                         response["scheduling"] = schedule_result
                     return response
@@ -2467,8 +2505,9 @@ class TodoOperations:
             '''
 
             result = await self.applescript.execute_applescript(script)
-            if result.get("outcome_uncertain"):
-                return _write_error("OUTCOME_UNCERTAIN", result["error"], outcome_uncertain=True)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get("success"):
                 output = result.get("output", "").strip()
@@ -2497,6 +2536,9 @@ class TodoOperations:
                         }
                     elif when:
                         schedule_result = await self.scheduler.schedule_todo_reliable(project_id, when)
+                        uncertain = uncertain_write(schedule_result)
+                        if uncertain:
+                            return uncertain
                         return {
                             "success": True,
                             "message": "Project updated and scheduled successfully",

@@ -2,6 +2,8 @@
 
 from ..utils.applescript_utils import AppleScriptTemplates
 
+from ..utils.write_outcome import uncertain_write
+
 import logging
 import re
 from typing import Any, Dict, List, Optional
@@ -272,6 +274,10 @@ class BulkOperations:
         if total_requested is None:
             total_requested = len(todo_ids)
 
+        uncertain = uncertain_write(result)
+        if uncertain:
+            return uncertain
+
         if not result.get('success'):
             return write_error(
                 "APPLESCRIPT_ERROR", "Failed to perform bulk update",
@@ -317,6 +323,9 @@ class BulkOperations:
                         url_result = await self.applescript.execute_url_scheme(
                             'update', {'id': todo_id, 'when': 'evening'}
                         )
+                        uncertain = uncertain_write(url_result)
+                        if uncertain:
+                            return uncertain
                         schedule_result = {
                             "success": url_result.get('success', False),
                             "method": "url_scheme",
@@ -335,6 +344,9 @@ class BulkOperations:
                         url_result = await self.applescript.execute_url_scheme(
                             'update', {'id': todo_id, 'when': when_value}
                         )
+                        uncertain = uncertain_write(url_result)
+                        if uncertain:
+                            return uncertain
                         schedule_result = {
                             "success": url_result.get('success', False),
                             "method": "url_scheme",
@@ -342,6 +354,9 @@ class BulkOperations:
                         }
                     else:
                         schedule_result = await self.reliable_scheduler.schedule_todo_reliable(todo_id, when_value)
+                        uncertain = uncertain_write(schedule_result)
+                        if uncertain:
+                            return uncertain
                     if schedule_result.get('success'):
                         scheduling_results.append(f"{todo_id}: scheduled")
                     else:
@@ -496,6 +511,9 @@ class BulkOperations:
             # full original list, matching pre-bead behavior).
             script = self._build_bulk_update_script(resolvable_ids, kwargs)
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             # Parse and return results. total_requested/failed_count must
             # reflect the ORIGINAL todo_ids (including pre-check

@@ -1,5 +1,7 @@
 """Write operations for Things 3 - uses AppleScript for reliable writes."""
 
+from ..utils.write_outcome import uncertain_write
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -258,12 +260,21 @@ class WriteOperations:
 
             if item_type == 'project':
                 result = await self._try_delete_scripts(todo_id, ['project id'])
+                uncertain = uncertain_write(result)
+                if uncertain:
+                    return uncertain
             elif item_type is not _RESOLVE_UNAVAILABLE:
                 # 'to-do' (and any other resolvable non-project type)
                 result = await self._try_delete_scripts(todo_id, ['to do id'])
+                uncertain = uncertain_write(result)
+                if uncertain:
+                    return uncertain
             else:
                 # things.get() unavailable - try both blind.
                 result = await self._try_delete_scripts(todo_id, ['to do id', 'project id'])
+                uncertain = uncertain_write(result)
+                if uncertain:
+                    return uncertain
 
             if result.get('success'):
                 deleted_as_project = result.get('id_kind') == 'project id'
@@ -277,6 +288,9 @@ class WriteOperations:
             # where `delete` itself errors (e.g. parent project already
             # trashed).
             move_result = await self._try_move_to_trash(todo_id)
+            uncertain = uncertain_write(move_result)
+            if uncertain:
+                return uncertain
             if move_result.get('success'):
                 return {
                     "success": True,
@@ -362,6 +376,9 @@ class WriteOperations:
             end tell
             '''
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
             if result.get('success'):
                 result = dict(result)
                 result['id_kind'] = id_kind
@@ -522,6 +539,9 @@ class WriteOperations:
             '''
 
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get("success"):
                 output = result.get("output", "").strip()
@@ -626,6 +646,9 @@ class WriteOperations:
             '''
 
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
 
             if result.get("success"):
                 output = result.get("output", "").strip()
@@ -713,6 +736,9 @@ class WriteOperations:
 
             logger.debug(f"add_tags: Generated script:\n{script}")
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
             if result.get('success'):
                 return {
                     "success": True,
@@ -818,6 +844,9 @@ class WriteOperations:
                 '''
 
             result = await self.applescript.execute_applescript(script)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
             write_succeeded = result.get('success', False)
             # removed_count/not_present describe the write that was attempted;
             # if the AppleScript write itself failed, nothing was actually

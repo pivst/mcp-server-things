@@ -10,6 +10,8 @@ from typing import Optional, List, Dict, Any, Union
 from datetime import datetime, date
 import asyncio
 
+from .utils.write_outcome import uncertain_write
+
 import logging
 import time
 
@@ -108,6 +110,10 @@ class MoveOperationsTools:
                 current_todo["todo"]
             )
 
+            uncertain = uncertain_write(move_result)
+            if uncertain:
+                return uncertain
+
             if move_result["success"]:
                 response = {
                     "success": True,
@@ -180,7 +186,7 @@ class MoveOperationsTools:
                 }
             
             successful_moves = []
-            failed_moves = []
+            failed_moves: List[Dict[str, Any]] = []
             
             # Process todos in batches to avoid overwhelming the system
             import asyncio
@@ -214,11 +220,14 @@ class MoveOperationsTools:
                     failed_moves.append({
                         "id": todo_id,
                         "error": result.get("error", "UNKNOWN"),
-                        "message": result.get("message", "Move operation failed")
+                        "message": result.get("message", "Move operation failed"),
+                        "outcome_uncertain": isinstance(result, dict) and result.get("outcome_uncertain", False)
                     })
             
             return {
                 "success": len(failed_moves) == 0,
+                **({"error": "OUTCOME_UNCERTAIN", "outcome_uncertain": True, "retry_safe": False}
+                   if any(r.get("outcome_uncertain") for r in failed_moves) else {}),
                 "message": f"Bulk move completed: {len(successful_moves)} successful, {len(failed_moves)} failed",
                 "destination": destination,
                 "total_requested": len(todo_ids),
@@ -589,6 +598,9 @@ class MoveOperationsTools:
             
             # Execute the move script
             result = await self.applescript.execute_applescript(script, cache_key=None)
+            uncertain = uncertain_write(result)
+            if uncertain:
+                return uncertain
             
             if result.get("success"):
                 output = result.get("output", "")
